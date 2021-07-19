@@ -15,7 +15,10 @@ class Page:
         self.volume: Optional[Volume] = None
 
     def __str__(self) -> str:
-        return f"(Page) {self.title}"
+        return self.title
+
+    def __repr__(self) -> str:
+        return f"Page(path={self.path}, title={self.title}, image={self.image})"
 
     @property
     def url(self) -> str:
@@ -35,7 +38,10 @@ class Volume:
         self.pages: dict[str, Page] = {}
 
     def __str__(self) -> str:
-        return f"(Volume) {self.title}"
+        return self.title
+
+    def __repr__(self) -> str:
+        return f"Volume(path={self.path}, title={self.title}, page_slugs={self.page_slugs})"
 
     @property
     def url(self) -> str:
@@ -74,7 +80,13 @@ class Comic:
         self.volumes: dict[str, Volume] = {}
 
     def __str__(self) -> str:
-        return f"(Comic) {self.name}"
+        return self.name
+
+    def __repr__(self) -> str:
+        return (
+            f"Comic(path={self.path}, name={self.name}, "
+            f"placeholder={self.placeholder}, volume_slugs={self.volume_slugs})"
+        )
 
     def each_volume(self) -> Iterator[Volume]:
         for volume_slug in self.volume_slugs:
