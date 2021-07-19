@@ -4,7 +4,7 @@ from pathlib import Path
 
 import click
 
-from scuzzie import ComicDeserializer, ComicSerializer, SiteGenerator
+from scuzzie import ComicDeserializer, ComicSerializer, SiteGenerator, Volume
 from scuzzie.exc import ScuzzieError
 
 
@@ -27,6 +27,38 @@ def scuzzie_error_handler() -> Generator[None, None, None]:
     except ScuzzieError as ex:
         click.secho(str(ex), err=True, fg="red")
         raise click.Abort() from ex
+
+
+def prompt_for_volume(volumes: list[Volume]) -> Volume:
+    click.echo("Available Volumes:")
+    for idx, volume in enumerate(volumes):
+        click.echo(f"{idx + 1:2}: {volume.title}")
+    click.echo()
+
+    while True:
+        idx = int(click.prompt("Select a volume", type=int, default=str(len(volumes))))
+        if 1 <= idx <= len(volumes):
+            break
+        else:
+            click.secho("Please select a valid volume number.", fg="red")
+
+    return volumes[idx]
+
+
+def sanitise_image_path(image_path_str: str, *, comic_path: Path) -> Path:
+    image_path = Path(image_path_str.strip("\"'")).absolute()
+    assets_path = (comic_path / "assets").absolute()
+
+    if assets_path not in image_path.parents:
+        click.secho(
+            f"{image_path} is not in the assets directory.\n"
+            "Please provide a path relative to the assets directory.",
+            fg="red",
+        )
+        raise click.Abort
+
+    # we treat the assets directory as the root of the comic
+    return Path("/") / image_path.relative_to(assets_path)
 
 
 @click.group()
@@ -78,29 +110,58 @@ def page():
         deserializer = ComicDeserializer(context.comic_path)
         comic = deserializer.read_comic()
 
-        print("Available Volumes:")
         # realise the generator for easy indexing et cetera
         volumes = list(comic.each_volume())
-        for idx, volume in enumerate(volumes):
-            print(f"{idx + 1:2}: {volume.title}")
-        print()
 
-        while True:
-            idx = int(
-                click.prompt("Select a volume", type=int, default=str(len(volumes)))
+        if not volumes:
+            raise ScuzzieError(
+                "No volumes found in comic, please run `scuzzie new volume` first!"
             )
-            if 1 <= idx <= len(volumes):
-                break
-            else:
-                click.secho("Please select a valid volume number.", fg="red")
+
+        if len(volumes) == 1:
+            volume = volumes[0]
+        else:
+            volume = prompt_for_volume(volumes)
+
+        click.echo(f"Using volume: {volume}")
+
+        click.echo(
+            "\n"
+            "Please provide some page details. "
+            "These can all be changed later."
+            "\n"
+        )
 
         title = click.prompt("Provide a title for the new page")
 
-        volume = volumes[idx - 1]
-        comic.create_page(title=title, volume=volume)
+        click.echo(
+            "\n"
+            "You can provide an image for the new page now, "
+            "or you can leave it blank to use the placeholder image. "
+            "\n"
+            "You can also drag the image onto this prompt rather than typing it manually."
+            "\n"
+        )
 
-        serializer = ComicSerializer(comic)
-        serializer.write_comic()
+        image_path = sanitise_image_path(
+            click.prompt("Page image", default=""), comic_path=context.comic_path
+        )
+
+        comic.create_page(title=title, image=image_path, volume=volume)
+
+        click.echo(
+            "\n"
+            "Page details:"
+            "\n"
+            f"  Volume: {volume.title}\n"
+            f"  Title: {title}\n"
+            f"  Image: {image_path}\n"
+        )
+
+        if click.confirm("Are these details correct?", default=True):
+            serializer = ComicSerializer(comic)
+            serializer.write_comic()
+            click.secho("Page created.", fg="green")
 
 
 @new.command()
