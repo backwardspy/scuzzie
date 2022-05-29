@@ -1,0 +1,7 @@
+#!/bin/sh
+. scripts/_common
+
+isort --check .
+black --check .
+pylint scuzzie
+mypy .

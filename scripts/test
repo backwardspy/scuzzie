@@ -1,0 +1,6 @@
+#!/bin/sh
+. scripts/_common
+
+coverage run -m ward --progress-style bar "$@"
+coverage xml
+coverage report --skip-covered --skip-empty
