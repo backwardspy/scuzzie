@@ -8,7 +8,7 @@ import click
 from scuzzie.comic import read_comic, write_comic
 from scuzzie.exc import ScuzzieError
 from scuzzie.generator import FileWriter, generate_site, load_templates
-from scuzzie.resources import Volume
+from scuzzie.resources import Comic, Volume
 
 DEFAULT_COMIC_PATH = "comic"
 DEFAULT_OUTPUT_PATH = "site"
@@ -65,6 +65,26 @@ def sanitise_image_path(image_path_str: str, *, comic_path: Path) -> Path:
 
     # we treat the assets directory as the root of the comic
     return Path("/") / image_path.relative_to(assets_path)
+
+
+def prompt_image_path(comic: Comic, *, resource_type: str) -> Path:
+    """Prompt the user to enter an image path."""
+    click.echo(
+        "\n"
+        f"You can provide an image for the {resource_type.lower()} now, "
+        "or you can leave it blank to use the placeholder image. "
+        "\n"
+        "You can also drag the image onto this prompt rather than typing it manually."
+        "\n"
+    )
+
+    image_path = click.prompt(f"{resource_type.title()} image", default="")
+    if not image_path:
+        image_path = str(
+            CONTEXT.comic_path / "assets" / str(comic.placeholder).strip("/")
+        )
+
+    return sanitise_image_path(image_path, comic_path=CONTEXT.comic_path)
 
 
 @click.group()
@@ -139,24 +159,7 @@ def _() -> None:
         )
 
         title = click.prompt("Provide a title for the new page")
-
-        click.echo(
-            "\n"
-            "You can provide an image for the new page now, "
-            "or you can leave it blank to use the placeholder image. "
-            "\n"
-            "You can also drag the image onto this prompt rather than typing it manually."
-            "\n"
-        )
-
-        image_path = click.prompt("Page image", default="")
-        if not image_path:
-            image_path = str(
-                CONTEXT.comic_path / "assets" / str(comic.placeholder).strip("/")
-            )
-        image_path = sanitise_image_path(image_path, comic_path=CONTEXT.comic_path)
-
-        comic.create_page(title=title, image=image_path, volume=volume)
+        image_path = prompt_image_path(comic, resource_type="page")
 
         click.echo(
             "\n"
@@ -167,9 +170,12 @@ def _() -> None:
             f"  Image: {image_path}\n"
         )
 
-        if click.confirm("Are these details correct?", default=True):
-            write_comic(comic)
-            click.secho("Page created.", fg="green")
+        if not click.confirm("Are these details correct?", default=True):
+            raise click.Abort
+
+        comic.create_page(title=title, image=image_path, volume=volume)
+        write_comic(comic)
+        click.secho("Page created.", fg="green")
 
 
 @new.command(name="volume")
@@ -178,8 +184,16 @@ def _() -> None:
     with scuzzie_error_handler():
         comic = read_comic(CONTEXT.comic_path)
         title = click.prompt("Provide a title for the new volume")
-        comic.create_volume(title=title)
+        image_path = prompt_image_path(comic, resource_type="volume")
+
+        click.echo(f"\nVolume details:\n  Title: {title}\n  Image: {image_path}\n")
+
+        if not click.confirm("Are these details correct?", default=True):
+            raise click.Abort
+
+        comic.create_volume(title=title, image=image_path)
         write_comic(comic)
+        click.secho("Volume created.", fg="green")
 
 
 if __name__ == "__main__":

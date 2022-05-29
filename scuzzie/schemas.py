@@ -42,6 +42,14 @@ def validate_path_is_file(path: Path) -> None:
         raise ValidationError(f"Path is not a file: {path}")
 
 
+def validate_asset_exists(path: Path, *, context: Mapping[str, Any]) -> None:
+    """Raises a ValidationError if the given path does not exist in the assets."""
+    relative_path = str(path).strip("/")
+    path = context["comic_path"] / "assets" / relative_path
+    validate_path_exists(path)
+    validate_path_is_file(path)
+
+
 class Comic(Schema):
     """Schema for a comic."""
 
@@ -56,10 +64,7 @@ class Comic(Schema):
         if data["placeholder"] is None:
             return
 
-        placeholder_path = str(data["placeholder"]).strip("/")
-        path = self.context["comic_path"] / "assets" / placeholder_path
-        validate_path_exists(path)
-        validate_path_is_file(path)
+        validate_asset_exists(data["placeholder"], context=self.context)
 
     @post_load
     def make_comic(self, fields: dict, **_kwargs: Any) -> resources.Comic:
@@ -72,7 +77,16 @@ class Volume(Schema):
 
     path = PathField(required=True, load_only=True)
     title = String(required=True)
+    image = PathField(required=True)
     page_slugs = List(String, required=True, data_key="pages")
+
+    @validates_schema
+    def validate_image(self, data: Mapping[str, Any], **_kwargs: Any) -> None:
+        """Ensure the image path exists if it is provided."""
+        if data["image"] is None:
+            return
+
+        validate_asset_exists(data["image"], context=self.context)
 
     @post_load
     def make_volume(self, fields: dict, **_kwargs: Any) -> resources.Volume:
@@ -93,10 +107,7 @@ class Page(Schema):
         if data["image"] is None:
             return
 
-        image_path = str(data["image"]).strip("/")
-        path = self.context["comic_path"] / "assets" / image_path
-        validate_path_exists(path)
-        validate_path_is_file(path)
+        validate_asset_exists(data["image"], context=self.context)
 
     @post_load
     def make_page(self, fields: dict, **_kwargs: Any) -> resources.Page:

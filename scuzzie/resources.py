@@ -35,11 +35,12 @@ class Volume:
     """A volume is a collection of pages."""
 
     def __init__(
-        self, *, path: Optional[Path], title: str, page_slugs: list[str]
+        self, *, path: Optional[Path], title: str, image: Path, page_slugs: list[str]
     ) -> None:
         self.path = path
         self.title = title
         self.slug = slugify(title)
+        self.image = image
         self.page_slugs = page_slugs
         self.pages: dict[str, Page] = {}
 
@@ -47,7 +48,10 @@ class Volume:
         return self.title
 
     def __repr__(self) -> str:
-        return f"Volume(path={self.path}, title={self.title}, page_slugs={self.page_slugs})"
+        return (
+            f"Volume(path={self.path}, title={self.title}, image={self.image}, "
+            f"page_slugs={self.page_slugs})"
+        )
 
     @property
     def url(self) -> str:
@@ -64,7 +68,7 @@ class Volume:
     def add_page(self, page: Page) -> None:
         """Add a page to this volume."""
         if page.slug in self.pages:
-            raise ScuzzieError(f"Attempt to add duplicate {page} to {self}")
+            raise ScuzzieError(f"Page {page} already exists in {self}")
 
         page.volume = self
 
@@ -107,15 +111,15 @@ class Comic:
     def add_volume(self, volume: Volume) -> None:
         """Add a volume to the comic."""
         if volume.slug in self.volumes:
-            raise ScuzzieError(f"Attempt to add duplicate {volume} to {self}")
+            raise ScuzzieError(f"Volume {volume} already exists in {self}")
 
         if volume.slug not in self.volume_slugs:
             self.volume_slugs.append(volume.slug)
         self.volumes[volume.slug] = volume
 
-    def create_volume(self, title: str) -> Volume:
+    def create_volume(self, title: str, image: Path) -> Volume:
         """Create and add a new volume to the comic."""
-        volume = Volume(path=None, title=title, page_slugs=[])
+        volume = Volume(path=None, title=title, image=image, page_slugs=[])
         self.add_volume(volume)
         return volume
 
