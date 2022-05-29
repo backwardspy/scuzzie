@@ -11,40 +11,50 @@ class Templator:
 
     def __init__(
         self,
-        index_template: Template,
-        archive_template: Template,
+        *,
+        index_page_template: Template,
+        about_page_template: Template,
+        archive_page_template: Template,
         volume_template: Template,
         page_template: Template,
     ):
-        self.index_template = index_template
-        self.archive_template = archive_template
+        self.index_template = index_page_template
+        self.about_template = about_page_template
+        self.archive_template = archive_page_template
         self.volume_template = volume_template
         self.page_template = page_template
 
-    def render_index(self, comic: Comic) -> str:
+    def render_index_page(self, comic: Comic) -> str:
         """Renders the index page."""
         try:
             return self.index_template.render(comic=comic)
         except Exception as ex:
-            raise ScuzzieError(f"Error rendering index: {ex}") from ex
+            raise ScuzzieError(f"Error rendering index page: {ex}") from ex
 
-    def render_archive(self, comic: Comic) -> str:
+    def render_about(self, comic: Comic) -> str:
+        """Renders the about page."""
+        try:
+            return self.about_template.render(comic=comic)
+        except Exception as ex:
+            raise ScuzzieError(f"Error rendering about page: {ex}") from ex
+
+    def render_archive_page(self, comic: Comic) -> str:
         """Renders the archive page."""
         try:
             return self.archive_template.render(comic=comic)
         except Exception as ex:
-            raise ScuzzieError(f"Error rendering archive: {ex}") from ex
+            raise ScuzzieError(f"Error rendering archive page: {ex}") from ex
 
-    def render_volume(self, volume: Volume) -> str:
+    def render_volume(self, volume: Volume, *, comic: Comic) -> str:
         """Renders a volume of pages."""
         try:
-            return self.volume_template.render(volume=volume)
+            return self.volume_template.render(comic=comic, volume=volume)
         except Exception as ex:
             raise ScuzzieError(f"Error rendering volume {volume}: {ex}") from ex
 
-    def render_page(self, page: Page) -> str:
+    def render_page(self, page: Page, *, comic: Comic) -> str:
         """Renders a comic page."""
         try:
-            return self.page_template.render(page=page)
+            return self.page_template.render(comic=comic, page=page)
         except Exception as ex:
             raise ScuzzieError(f"Error rendering page {page}: {ex}") from ex
