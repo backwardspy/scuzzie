@@ -1,6 +1,8 @@
 """Defines the templator class."""
 from mako.template import Template
 
+from scuzzie.exc import ScuzzieError
+
 from .resources import Comic, Page, Volume
 
 
@@ -21,16 +23,28 @@ class Templator:
 
     def render_index(self, comic: Comic) -> str:
         """Renders the index page."""
-        return self.index_template.render(comic=comic)
+        try:
+            return self.index_template.render(comic=comic)
+        except Exception as ex:
+            raise ScuzzieError(f"Error rendering index: {ex}") from ex
 
     def render_archive(self, comic: Comic) -> str:
         """Renders the archive page."""
-        return self.archive_template.render(comic=comic)
+        try:
+            return self.archive_template.render(comic=comic)
+        except Exception as ex:
+            raise ScuzzieError(f"Error rendering archive: {ex}") from ex
 
     def render_volume(self, volume: Volume) -> str:
         """Renders a volume of pages."""
-        return self.volume_template.render(volume=volume)
+        try:
+            return self.volume_template.render(volume=volume)
+        except Exception as ex:
+            raise ScuzzieError(f"Error rendering volume {volume}: {ex}") from ex
 
     def render_page(self, page: Page) -> str:
         """Renders a comic page."""
-        return self.page_template.render(page=page)
+        try:
+            return self.page_template.render(page=page)
+        except Exception as ex:
+            raise ScuzzieError(f"Error rendering page {page}: {ex}") from ex

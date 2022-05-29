@@ -60,6 +60,14 @@ class Volume:
             raise ScuzzieError("Attempt to get volume URL without a path.")
         return f"/volumes/{self.slug}.html"
 
+    @property
+    def latest_page(self) -> Page | None:
+        """Returns the latest page in this volume, or none if the volume has no pages."""
+        if not self.page_slugs:
+            return None
+
+        return self.pages[self.page_slugs[-1]]
+
     def each_page(self) -> Iterator[Page]:
         """Returns an iterator over all pages in this volume."""
         for page_slug in self.page_slugs:
@@ -102,6 +110,14 @@ class Comic:
             f"Comic(path={self.path}, name={self.name}, "
             f"placeholder={self.placeholder}, volume_slugs={self.volume_slugs})"
         )
+
+    @property
+    def latest_volume(self) -> Volume | None:
+        """Returns the latest volume in the comic, or none if the comic has no volumes."""
+        if not self.volume_slugs:
+            return None
+
+        return self.volumes[self.volume_slugs[-1]]
 
     def each_volume(self) -> Iterator[Volume]:
         """Returns an iterator over all volumes in the comic."""
