@@ -21,25 +21,31 @@ class FileWriter:
         self.path = path
         self.templator = templator
 
-    def write_index(self, comic: Comic) -> None:
+    def write_index_page(self, comic: Comic) -> None:
         """Renders & writes the index page."""
-        index_path = self.path / "index.html"
-        content = self.templator.render_index(comic)
-        self._write_content(index_path, content)
+        index_page_path = self.path / "index.html"
+        content = self.templator.render_index_page(comic)
+        self._write_content(index_page_path, content)
 
-    def write_archive(self, comic: Comic) -> None:
+    def write_about_page(self, comic: Comic) -> None:
+        """Renders & writes the about page."""
+        about_page_path = self.path / "about.html"
+        content = self.templator.render_about(comic)
+        self._write_content(about_page_path, content)
+
+    def write_archive_page(self, comic: Comic) -> None:
         """Renders & writes the archive page."""
-        archive_path = self.path / "archive.html"
-        content = self.templator.render_archive(comic)
-        self._write_content(archive_path, content)
+        archive_page_path = self.path / "archive.html"
+        content = self.templator.render_archive_page(comic)
+        self._write_content(archive_page_path, content)
 
-    def write_volume(self, volume: Volume) -> None:
+    def write_volume(self, volume: Volume, *, comic: Comic) -> None:
         """Renders & writes a volume of pages."""
         volume_path = self.path / "volumes" / f"{volume.slug}.html"
-        content = self.templator.render_volume(volume)
+        content = self.templator.render_volume(volume, comic=comic)
         self._write_content(volume_path, content)
 
-    def write_page(self, page: Page) -> None:
+    def write_page(self, page: Page, *, comic: Comic) -> None:
         """Renders & writes a comic page."""
         if page.volume:
             page_path = (
@@ -49,7 +55,7 @@ class FileWriter:
             raise ScuzziePageTemplateError(
                 page, reason="Page has not been assigned to a volume."
             )
-        content = self.templator.render_page(page)
+        content = self.templator.render_page(page, comic=comic)
         self._write_content(page_path, content)
 
     def copy_assets(self, path: Path) -> None:
@@ -80,10 +86,11 @@ def load_templates(comic: Comic) -> Templator:
             return Template(template_file.read(), lookup=lookup)
 
     return Templator(
-        load_template("index.mako"),
-        load_template("archive.mako"),
-        load_template("volume.mako"),
-        load_template("page.mako"),
+        index_page_template=load_template("index.mako"),
+        about_page_template=load_template("about.mako"),
+        archive_page_template=load_template("archive.mako"),
+        volume_template=load_template("volume.mako"),
+        page_template=load_template("page.mako"),
     )
 
 
@@ -99,19 +106,22 @@ def generate_site(comic: Comic, writer: FileWriter) -> None:
 
     print(f"Building comic {comic.name}")
 
-    print("Building index")
-    writer.write_index(comic)
+    print("Building index page")
+    writer.write_index_page(comic)
 
-    print("Building archive")
-    writer.write_archive(comic)
+    print("Building about page")
+    writer.write_about_page(comic)
+
+    print("Building archive page")
+    writer.write_archive_page(comic)
 
     for volume in comic.each_volume():
         print(f"Building volume {volume.title}")
-        writer.write_volume(volume)
+        writer.write_volume(volume, comic=comic)
 
         for page in volume.each_page():
             print(f"  Building page {page.title}")
-            writer.write_page(page)
+            writer.write_page(page, comic=comic)
 
     print("Copying static assets")
     writer.copy_assets(comic.path / "assets")
