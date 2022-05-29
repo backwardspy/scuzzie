@@ -5,10 +5,11 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 name = "scuzzie"
 version = "0.0.0"
-description = ""
+description = "a simple webcomic static site generator"
 authors = ["backwardspy <backwardspy@gmail.com>"]
 license = "MIT"
 readme = "README.md"
+repository = "https://github.com/backwardspy/scuzzie"
 
 [tool.poetry.scripts]
 scuzzie = "scuzzie.cli:scuzzie"
