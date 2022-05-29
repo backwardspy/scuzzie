@@ -1,12 +1,11 @@
 from contextlib import contextmanager
-from typing import NamedTuple, Generator
 from pathlib import Path
+from typing import Generator, NamedTuple
 
 import click
 
 from scuzzie import ComicDeserializer, ComicSerializer, SiteGenerator, Volume
 from scuzzie.exc import ScuzzieError
-
 
 DEFAULT_COMIC_PATH = "comic"
 DEFAULT_OUTPUT_PATH = "site"
@@ -42,7 +41,7 @@ def prompt_for_volume(volumes: list[Volume]) -> Volume:
         else:
             click.secho("Please select a valid volume number.", fg="red")
 
-    return volumes[idx]
+    return volumes[idx - 1]
 
 
 def sanitise_image_path(image_path_str: str, *, comic_path: Path) -> Path:
