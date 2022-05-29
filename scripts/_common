@@ -1,0 +1,12 @@
+#!/bin/sh
+set -euf
+
+info() {
+    echo "$@"
+}
+
+warn() {
+    tput setaf 1
+    echo "!! $@"
+    tput sgr0
+}

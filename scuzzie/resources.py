@@ -1,5 +1,6 @@
-from typing import Optional, Iterator
+"""Defines the comic, volume, and page resources that make up a comic."""
 from pathlib import Path
+from typing import Iterator, Optional
 
 from slugify import slugify
 
@@ -7,6 +8,8 @@ from scuzzie.exc import ScuzzieError
 
 
 class Page:
+    """One page of a comic."""
+
     def __init__(self, *, path: Optional[Path], title: str, image: Path) -> None:
         self.path = path
         self.title = title
@@ -22,12 +25,15 @@ class Page:
 
     @property
     def url(self) -> str:
+        """Returns the URL of the page."""
         if self.volume is None:
             raise ScuzzieError("Attempt to get path URL but path is not in a volume.")
         return f"/volumes/{self.volume.slug}/pages/{self.slug}.html"
 
 
 class Volume:
+    """A volume is a collection of pages."""
+
     def __init__(
         self, *, path: Optional[Path], title: str, page_slugs: list[str]
     ) -> None:
@@ -45,15 +51,18 @@ class Volume:
 
     @property
     def url(self) -> str:
+        """Returns the URL of this volume."""
         if self.path is None:
             raise ScuzzieError("Attempt to get volume URL without a path.")
         return f"/volumes/{self.slug}.html"
 
     def each_page(self) -> Iterator[Page]:
+        """Returns an iterator over all pages in this volume."""
         for page_slug in self.page_slugs:
             yield self.pages[page_slug]
 
     def add_page(self, page: Page) -> None:
+        """Add a page to this volume."""
         if page.slug in self.pages:
             raise ScuzzieError(f"Attempt to add duplicate {page} to {self}")
 
@@ -65,6 +74,8 @@ class Volume:
 
 
 class Comic:
+    """A comic is a collection of volumes."""
+
     def __init__(
         self,
         *,
@@ -89,10 +100,12 @@ class Comic:
         )
 
     def each_volume(self) -> Iterator[Volume]:
+        """Returns an iterator over all volumes in the comic."""
         for volume_slug in self.volume_slugs:
             yield self.volumes[volume_slug]
 
     def add_volume(self, volume: Volume) -> None:
+        """Add a volume to the comic."""
         if volume.slug in self.volumes:
             raise ScuzzieError(f"Attempt to add duplicate {volume} to {self}")
 
@@ -101,6 +114,7 @@ class Comic:
         self.volumes[volume.slug] = volume
 
     def create_volume(self, title: str) -> Volume:
+        """Create and add a new volume to the comic."""
         volume = Volume(path=None, title=title, page_slugs=[])
         self.add_volume(volume)
         return volume
@@ -108,6 +122,7 @@ class Comic:
     def create_page(
         self, *, title: str, image: Optional[Path] = None, volume: Volume
     ) -> Page:
+        """Create a new page in the given volume."""
         page = Page(
             path=None,
             title=title,
