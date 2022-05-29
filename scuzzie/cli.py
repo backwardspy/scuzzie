@@ -1,26 +1,32 @@
+"""Defines the Scuzzie command line interface."""
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator, NamedTuple
 
 import click
 
-from scuzzie import ComicDeserializer, ComicSerializer, SiteGenerator, Volume
+from scuzzie.comic import read_comic, write_comic
 from scuzzie.exc import ScuzzieError
+from scuzzie.generator import FileWriter, generate_site, load_templates
+from scuzzie.resources import Volume
 
 DEFAULT_COMIC_PATH = "comic"
 DEFAULT_OUTPUT_PATH = "site"
 
 
 class Context(NamedTuple):
+    """Defines a global context for use by CLI functions."""
+
     comic_path: Path
     output_path: Path
 
 
-context: Context
+CONTEXT: Context
 
 
 @contextmanager
 def scuzzie_error_handler() -> Generator[None, None, None]:
+    """Provides a context manager that handles ScuzzieErrors."""
     try:
         yield
     except ScuzzieError as ex:
@@ -29,6 +35,7 @@ def scuzzie_error_handler() -> Generator[None, None, None]:
 
 
 def prompt_for_volume(volumes: list[Volume]) -> Volume:
+    """Prompt the user to choose a volume from the list."""
     click.echo("Available Volumes:")
     for idx, volume in enumerate(volumes):
         click.echo(f"{idx + 1:2}: {volume.title}")
@@ -38,13 +45,13 @@ def prompt_for_volume(volumes: list[Volume]) -> Volume:
         idx = int(click.prompt("Select a volume", type=int, default=str(len(volumes))))
         if 1 <= idx <= len(volumes):
             break
-        else:
-            click.secho("Please select a valid volume number.", fg="red")
+        click.secho("Please select a valid volume number.", fg="red")
 
     return volumes[idx - 1]
 
 
 def sanitise_image_path(image_path_str: str, *, comic_path: Path) -> Path:
+    """Sanitise the given image path string."""
     image_path = Path(image_path_str.strip("\"'")).absolute()
     assets_path = (comic_path / "assets").absolute()
 
@@ -77,37 +84,36 @@ def sanitise_image_path(image_path_str: str, *, comic_path: Path) -> Path:
     default=DEFAULT_OUTPUT_PATH,
     show_default=True,
 )
-def scuzzie(comic_path_string: str, output_path_string: str):
+def scuzzie(comic_path_string: str, output_path_string: str) -> None:
+    """Click command group that sets up the global CLI context."""
     # not a huge fan of this global context, but click's pass_context doesn't
     # play too nicely with type annotations...
-    global context
-    context = Context(
+    global CONTEXT  # pylint: disable=global-statement
+    CONTEXT = Context(
         comic_path=Path(comic_path_string), output_path=Path(output_path_string)
     )
 
 
 @scuzzie.command()
-def build():
+def build() -> None:
+    """Builds the site."""
     with scuzzie_error_handler():
-        deserializer = ComicDeserializer(context.comic_path)
-        comic = deserializer.read_comic()
-        reader = SiteGenerator.FileReader(comic)
-        writer = SiteGenerator.FileWriter(
-            path=context.output_path, templator=reader.templator
-        )
-        SiteGenerator(reader, writer).run()
+        comic = read_comic(CONTEXT.comic_path)
+        templator = load_templates(comic)
+        writer = FileWriter(path=CONTEXT.output_path, templator=templator)
+        generate_site(comic, writer)
 
 
 @scuzzie.group()
-def new():
-    pass
+def new() -> None:
+    """CLI command group for making new comic resources."""
 
 
-@new.command()
-def page():
+@new.command(name="page")
+def _() -> None:
+    """CLI command that makes a new page resource."""
     with scuzzie_error_handler():
-        deserializer = ComicDeserializer(context.comic_path)
-        comic = deserializer.read_comic()
+        comic = read_comic(CONTEXT.comic_path)
 
         # realise the generator for easy indexing et cetera
         volumes = list(comic.each_volume())
@@ -142,9 +148,12 @@ def page():
             "\n"
         )
 
-        image_path = sanitise_image_path(
-            click.prompt("Page image", default=""), comic_path=context.comic_path
-        )
+        image_path = click.prompt("Page image", default="")
+        if not image_path:
+            image_path = str(
+                CONTEXT.comic_path / "assets" / str(comic.placeholder).strip("/")
+            )
+        image_path = sanitise_image_path(image_path, comic_path=CONTEXT.comic_path)
 
         comic.create_page(title=title, image=image_path, volume=volume)
 
@@ -158,24 +167,20 @@ def page():
         )
 
         if click.confirm("Are these details correct?", default=True):
-            serializer = ComicSerializer(comic)
-            serializer.write_comic()
+            write_comic(comic)
             click.secho("Page created.", fg="green")
 
 
-@new.command()
-def volume():
+@new.command(name="volume")
+def _() -> None:
+    """CLI command that makes a new volume resource."""
     with scuzzie_error_handler():
-        deserializer = ComicDeserializer(context.comic_path)
-        comic = deserializer.read_comic()
-
+        comic = read_comic(CONTEXT.comic_path)
         title = click.prompt("Provide a title for the new volume")
-
         comic.create_volume(title=title)
-
-        serializer = ComicSerializer(comic)
-        serializer.write_comic()
+        write_comic(comic)
 
 
 if __name__ == "__main__":
-    scuzzie()
+    # pylint can't tell that click will fill out these parameters automatically.
+    scuzzie()  # pylint: disable=no-value-for-parameter

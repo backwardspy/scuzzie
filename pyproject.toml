@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "scuzzie"
-version = "0.1.0"
+version = "0.0.0"
 description = ""
 authors = ["backwardspy <backwardspy@gmail.com>"]
 license = "MIT"
@@ -22,8 +22,31 @@ python-slugify = "^6.1.2"
 marshmallow = "^3.15.0"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^7.1.2"
-flake8 = "^4.0.1"
-mypy = "^0.950"
+mypy = "^0.960"
 black = "^22.3.0"
 ptpython = "^3.0.20"
+ward = "^0.66.0-beta.0"
+pylint = "^2.13.9"
+isort = "^5.10.1"
+types-toml = "^0.10.7"
+types-python-slugify = "^5.0.4"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+ignore_missing_imports = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_unreachable = true
+
+[tool.pylint.messages_control]
+extension-pkg-whitelist = "pydantic"
+
+[tool.ward]
+order = "random"
