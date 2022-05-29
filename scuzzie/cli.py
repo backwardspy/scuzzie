@@ -84,6 +84,7 @@ def sanitise_image_path(image_path_str: str, *, comic_path: Path) -> Path:
     default=DEFAULT_OUTPUT_PATH,
     show_default=True,
 )
+@click.version_option()
 def scuzzie(comic_path_string: str, output_path_string: str) -> None:
     """Click command group that sets up the global CLI context."""
     # not a huge fan of this global context, but click's pass_context doesn't
