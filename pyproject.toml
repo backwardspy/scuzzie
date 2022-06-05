@@ -13,6 +13,7 @@ repository = "https://github.com/backwardspy/scuzzie"
 
 [tool.poetry.scripts]
 scuzzie = "scuzzie.cli:scuzzie"
+scuzzie-gui = "scuzzie.gui:scuzzie"
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -21,6 +22,10 @@ toml = "^0.10.2"
 Mako = "^1.2.0"
 python-slugify = "^6.1.2"
 marshmallow = "^3.15.0"
+PySimpleGUI = {version = "^4.60.1", optional = true}
+
+[tool.poetry.extras]
+gui = ["PySimpleGUI"]
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^0.960"
