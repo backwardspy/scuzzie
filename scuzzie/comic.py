@@ -1,10 +1,11 @@
 """Defines comic resource serializers & deserializers."""
 from pathlib import Path
-from typing import Optional, Type
+from typing import Any, Mapping, Optional, Type
 
-import toml
+import tomli
+import tomli_w
 
-from . import schemas
+from . import models
 from .exc import (
     ScuzzieComicConfigError,
     ScuzzieConfigError,
@@ -22,18 +23,25 @@ def _ensure_path(path: Path) -> Path:
 
 def _try_read_toml(path: Path, error_type: Type[ScuzzieConfigError]) -> dict:
     try:
-        data = toml.load(path)
+        with path.open("rb") as file:
+            return tomli.load(file)
     except FileNotFoundError as ex:
         raise error_type(
             reason=f"Failed to load file from {path}; it may not exist."
         ) from ex
-    return dict(data)
 
 
-def _try_write_toml(path: Path, data: dict) -> None:
+def _try_write_toml(path: Path, data: Mapping[str, Any]) -> None:
     _ensure_path(path.parent)
+
+    data = {**data}
+    for key, value in data.items():
+        if isinstance(value, Path):
+            data[key] = str(value)
+
+    toml = tomli_w.dumps(data)
     with path.open("w") as file:
-        toml.dump(data, file)
+        print(toml, file=file)
 
 
 def read_comic(path: Path) -> Comic:
@@ -100,30 +108,38 @@ def _read_page_config(path: Path) -> dict:
 
 
 def _comic_from_config(config: dict, *, path: Path) -> Comic:
-    schema = schemas.Comic()
-    schema.context["comic_path"] = path
     try:
-        return schema.load({"path": path, **config})
-    except schemas.ValidationError as ex:
+        with models.set_context(path):
+            data = models.Comic(**config)
+    except ValueError as ex:
         raise ScuzzieComicConfigError(str(ex)) from ex
+
+    return Comic(
+        path=path,
+        name=data.name,
+        placeholder=data.placeholder,
+        volume_slugs=data.volumes,
+    )
 
 
 def _volume_from_config(config: dict, *, path: Path, comic_path: Path) -> Volume:
-    schema = schemas.Volume()
-    schema.context["comic_path"] = comic_path
     try:
-        return schema.load({"path": path, **config})
-    except schemas.ValidationError as ex:
+        with models.set_context(comic_path):
+            data = models.Volume(**config)
+    except ValueError as ex:
         raise ScuzzieVolumeConfigError(str(ex)) from ex
+
+    return Volume(path=path, title=data.title, image=data.image, page_slugs=data.pages)
 
 
 def _page_from_config(config: dict, *, path: Path, comic_path: Path) -> Page:
-    schema = schemas.Page()
-    schema.context["comic_path"] = comic_path
     try:
-        return schema.load({"path": path, **config})
-    except schemas.ValidationError as ex:
+        with models.set_context(comic_path):
+            data = models.Page(**config)
+    except ValueError as ex:
         raise ScuzzieVolumeConfigError(str(ex)) from ex
+
+    return Page(path=path, title=data.title, image=data.image)
 
 
 def _ensure_comic_has_path(comic: Comic, path: Optional[Path] = None) -> Path:
@@ -148,10 +164,21 @@ def write_comic(comic: Comic, *, path: Path | None = None) -> None:
 
 def _write_comic_config(comic: Comic, *, path: Path) -> None:
     config_path = path / "comic.toml"
-    schema = schemas.Comic()
-    schema.context["comic_path"] = comic.path
-    config = schema.dump(comic)
-    _try_write_toml(config_path, config)
+
+    if not comic.path:
+        raise ScuzzieError(
+            "Attempted to write virtual comic. This should never happen."
+        )
+
+    with models.set_context(comic.path):
+        config = models.Comic(
+            path=comic.path,
+            name=comic.name,
+            placeholder=comic.placeholder,
+            volumes=comic.volume_slugs,
+        )
+
+    _try_write_toml(config_path, config.dict())
 
 
 def _write_volumes(*, comic: Comic, path: Path) -> None:
@@ -166,24 +193,36 @@ def _write_volume(volume: Volume, *, comic: Comic, path: Path) -> None:
 
 
 def _write_volume_config(volume: Volume, *, comic: Comic, path: Path) -> None:
+    if not comic.path:
+        raise ScuzzieError(
+            "Attempted to write volume with a virtual comic. This should never happen."
+        )
+
+    with models.set_context(comic.path):
+        config = models.Volume(
+            title=volume.title,
+            image=volume.image,
+            pages=volume.page_slugs,
+        )
     path = path / "volumes" / volume.slug / "volume.toml"
-    schema = schemas.Volume()
-    schema.context["comic_path"] = comic.path
-    config = schema.dump(volume)
-    _try_write_toml(path, config)
+    _try_write_toml(path, config.dict())
 
 
 def _write_page(page: Page, *, comic: Comic) -> None:
-    _write_page_config(page, comic=comic)
+    if not comic.path:
+        raise ScuzzieError(
+            "Attempted to write page with a virtual comic. This should never happen."
+        )
 
-
-def _write_page_config(page: Page, *, comic: Comic) -> None:
     if page.volume and page.volume.path:
+        with models.set_context(comic.path):
+            config = models.Page(
+                title=page.title,
+                image=page.image,
+            )
+
         path = page.volume.path / "pages" / page.slug / "page.toml"
-        schema = schemas.Page()
-        schema.context["comic_path"] = comic.path
-        config = schema.dump(page)
-        _try_write_toml(path, config)
+        _try_write_toml(path, config.dict())
     else:
         raise ScuzzieVolumeConfigError(
             "Tried to save page into null volume or volume with a null path."
