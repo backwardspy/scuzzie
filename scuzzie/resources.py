@@ -1,5 +1,5 @@
 """Defines the comic, volume, and page resources that make up a comic."""
-from functools import cache, cached_property
+from functools import cached_property, lru_cache
 from pathlib import Path
 from typing import Iterator, Optional
 
@@ -125,7 +125,7 @@ class Comic:
         """Returns a list of all pages in the comic."""
         return [page for volume in self.each_volume() for page in volume.each_page()]
 
-    @cache
+    @lru_cache
     def page_after(self, page: Page) -> Page | None:
         """Returns the page after the given page, or None if that is the last page."""
         pages = self.all_pages
@@ -134,7 +134,7 @@ class Comic:
             return pages[index + 1]
         return None
 
-    @cache
+    @lru_cache
     def page_before(self, page: Page) -> Page | None:
         """Returns the page before the given page, or None if that is the first page."""
         pages = self.all_pages

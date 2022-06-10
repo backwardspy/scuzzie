@@ -18,24 +18,25 @@ scuzzie-gui = "scuzzie.gui:scuzzie"
 [tool.poetry.dependencies]
 python = "^3.10"
 click = "^8.1.3"
-toml = "^0.10.2"
 Mako = "^1.2.0"
 python-slugify = "^6.1.2"
-marshmallow = "^3.15.0"
 PySimpleGUI = {version = "^4.60.1", optional = true}
+pydantic = "^1.9.1"
+tomli = "^2.0.1"
+tomli-w = "^1.0.0"
 
 [tool.poetry.extras]
 gui = ["PySimpleGUI"]
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^0.960"
+mypy = "^0.961"
 black = "^22.3.0"
 ptpython = "^3.0.20"
-ward = "^0.66.0-beta.0"
-pylint = "^2.13.9"
+ward = "^0.66.0b0"
+pylint = "^2.14.1"
 isort = "^5.10.1"
-types-toml = "^0.10.7"
 types-python-slugify = "^5.0.4"
+types-contextvars = "^2.4.6"
 
 [tool.poetry-dynamic-versioning]
 enable = true
@@ -53,6 +54,10 @@ warn_unreachable = true
 
 [tool.pylint.messages_control]
 extension-pkg-whitelist = "pydantic"
+good-names = [
+    "v",    # pydantic validator argument
+    "ex",   # exception
+]
 
 [tool.ward]
 order = "random"
