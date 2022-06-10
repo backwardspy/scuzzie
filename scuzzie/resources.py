@@ -62,6 +62,14 @@ class Volume:
         return f"/volumes/{self.slug}.html"
 
     @property
+    def first_page(self) -> Page | None:
+        """Returns the first page in this volume, or none if the volume has no pages."""
+        if not self.page_slugs:
+            return None
+
+        return self.pages[self.page_slugs[0]]
+
+    @property
     def latest_page(self) -> Page | None:
         """Returns the latest page in this volume, or none if the volume has no pages."""
         if not self.page_slugs:
@@ -111,6 +119,14 @@ class Comic:
             f"Comic(path={self.path}, name={self.name}, "
             f"placeholder={self.placeholder}, volume_slugs={self.volume_slugs})"
         )
+
+    @property
+    def first_volume(self) -> Volume | None:
+        """Returns the first volume in the comic, or none if the comic has no volumes."""
+        if not self.volume_slugs:
+            return None
+
+        return self.volumes[self.volume_slugs[0]]
 
     @property
     def latest_volume(self) -> Volume | None:
